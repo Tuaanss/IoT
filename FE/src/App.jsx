@@ -66,6 +66,25 @@ export default function App() {
     loadHistory();
   }, []);
 
+  // When user navigates to Action History, refetch from DB.
+  // This fixes the case where backend was down during initial load.
+  useEffect(() => {
+    if (page !== "history") return;
+
+    const loadHistory = async () => {
+      try {
+        const data = await fetchActionHistory(200);
+        if (data && Array.isArray(data.history)) {
+          setHistory(data.history);
+        }
+      } catch (e) {
+        console.error("Failed to refresh history", e);
+      }
+    };
+
+    loadHistory();
+  }, [page]);
+
   // Poll latest sensor values from backend every 2s
   useEffect(() => {
     let isCancelled = false;
