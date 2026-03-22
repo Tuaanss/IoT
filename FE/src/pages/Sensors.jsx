@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
+import { splitDateTimeForDisplay } from "../utils/splitDateTime";
 
 export default function Sensors({ rows }) {
   const [type, setType] = useState("all");
@@ -43,114 +44,164 @@ export default function Sensors({ rows }) {
     setPage(1);
   };
 
+  const hasActiveFilters =
+    type !== "all" || valueQuery.trim() || date || timeFrom || timeTo;
+
   return (
-    <div className="panel">
+    <div className="panel sensorsPanel">
       <div className="panelInner">
-        <div className="toolbarColumn">
-          <div className="toolbarHeader">
+        <div className="sensorsToolbar">
+          <div className="sensorsToolbarTitle">
+            <Filter size={18} className="sensorsToolbarIcon" aria-hidden />
             <div className="toolbarTitle">Sensors list</div>
           </div>
 
-          <div className="toolbarFilters">
-            <select
-              className="select"
-              value={type}
-              onChange={(e) => {
-                setType(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="all">All sensors</option>
-              <option value="temp">Temperature</option>
-              <option value="humidity">Humidity</option>
-              <option value="light">Light</option>
-            </select>
+          <div className="sensorsFilterRow">
+            <div className="sensorsFilterField">
+              <label htmlFor="sensor-type">Sensor</label>
+              <select
+                id="sensor-type"
+                className="select sensorsSelect"
+                value={type}
+                onChange={(e) => {
+                  setType(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="all">All</option>
+                <option value="temp">Temperature</option>
+                <option value="humidity">Humidity</option>
+                <option value="light">Light</option>
+              </select>
+            </div>
 
-            <input
-              className="input inputCompact"
-              value={valueQuery}
-              placeholder="Search value (e.g 27.5 °C)"
-              onChange={(e) => {
-                setValueQuery(e.target.value);
-                setPage(1);
-              }}
-            />
+            <div className="sensorsFilterField sensorsFilterFieldGrow">
+              <label htmlFor="sensor-search">Value</label>
+              <input
+                id="sensor-search"
+                className="input sensorsInput"
+                value={valueQuery}
+                placeholder="Search in value column…"
+                onChange={(e) => {
+                  setValueQuery(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
 
-            <input
-              className="input inputCompact"
-              type="date"
-              value={date}
-              onChange={(e) => {
-                setDate(e.target.value);
-                setPage(1);
-              }}
-            />
+            <div className="sensorsFilterField">
+              <label htmlFor="sensor-date">Date</label>
+              <input
+                id="sensor-date"
+                className="input sensorsInput"
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
 
-            <input
-              className="input inputCompact"
-              type="time"
-              value={timeFrom}
-              onChange={(e) => {
-                setTimeFrom(e.target.value);
-                setPage(1);
-              }}
-            />
+            <div className="sensorsFilterField sensorsFilterTimeBlock">
+              <span className="sensorsFilterFieldLabel" id="time-range-label">
+                Time of day
+              </span>
+              <div className="sensorsTimeRange" role="group" aria-labelledby="time-range-label">
+                <div className="sensorsTimePair">
+                  <label htmlFor="time-from">From</label>
+                  <input
+                    id="time-from"
+                    className="input sensorsInput sensorsInputTime"
+                    type="time"
+                    value={timeFrom}
+                    onChange={(e) => {
+                      setTimeFrom(e.target.value);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+                <span className="sensorsTimeSep" aria-hidden>
+                  —
+                </span>
+                <div className="sensorsTimePair">
+                  <label htmlFor="time-to">To</label>
+                  <input
+                    id="time-to"
+                    className="input sensorsInput sensorsInputTime"
+                    type="time"
+                    value={timeTo}
+                    onChange={(e) => {
+                      setTimeTo(e.target.value);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
 
-            <input
-              className="input inputCompact"
-              type="time"
-              value={timeTo}
-              onChange={(e) => {
-                setTimeTo(e.target.value);
-                setPage(1);
-              }}
-            />
-
-            <button className="pageBtn" title="Clear filters" type="button" onClick={clearFilters}>
-              <X size={14} />
-            </button>
+            <div className="sensorsFilterActions">
+              <button
+                className="sensorsClearBtn"
+                type="button"
+                onClick={clearFilters}
+                disabled={!hasActiveFilters}
+                title="Clear filters"
+              >
+                <X size={16} />
+                Clear filters
+              </button>
+            </div>
           </div>
         </div>
 
-        <table className="table">
-          <thead>
-            <tr>
-              <th style={{ width: 80 }}>ID</th>
-              <th>Sensor Name</th>
-              <th style={{ width: 160 }}>Value</th>
-              <th style={{ width: 220 }}>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageRows.map((r) => (
-              <tr key={r.id}>
-                <td className="rowMuted">{r.id}</td>
-                <td
-                  style={{
-                    color:
-                      r.type === "humidity"
-                        ? "var(--blue)"
-                        : r.type === "light"
-                          ? "var(--yellow)"
-                          : "var(--red)",
-                    fontWeight: 800,
-                  }}
-                >
-                  {r.name}
-                </td>
-                <td>{r.value}</td>
-                <td className="rowMuted">{r.time}</td>
-              </tr>
-            ))}
-            {!pageRows.length && (
+        <div className="sensorsTableWrap">
+          <table className="table sensorsTable">
+            <thead>
               <tr>
-                <td colSpan={4} className="rowMuted" style={{ padding: 16 }}>
-                  No data
-                </td>
+                <th style={{ width: 80 }}>ID</th>
+                <th>Sensor name</th>
+                <th style={{ width: 160 }}>Value</th>
+                <th style={{ width: 120 }}>Date</th>
+                <th style={{ width: 110 }}>Time</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {pageRows.map((r) => {
+                const { date, time } = splitDateTimeForDisplay(r.time);
+                return (
+                <tr key={r.id}>
+                  <td className="rowMuted">{r.id}</td>
+                  <td
+                    className="sensorsNameCell"
+                    data-type={r.type}
+                    style={{
+                      color:
+                        r.type === "humidity"
+                          ? "var(--blue)"
+                          : r.type === "light"
+                            ? "var(--yellow)"
+                            : "var(--red)",
+                    }}
+                  >
+                    {r.name}
+                  </td>
+                  <td className="sensorsValueCell">{r.value}</td>
+                  <td className="rowMuted sensorsTimeCell">{date}</td>
+                  <td className="rowMuted sensorsTimeCell">{time}</td>
+                </tr>
+                );
+              })}
+              {!pageRows.length && (
+                <tr>
+                  <td colSpan={5} className="sensorsEmpty">
+                    No data
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
         <div className="pagination">
           <button

@@ -4,7 +4,7 @@ import NavItem from "../NavItem";
 
 const PAGE_TITLES = {
   dashboard: "Overview",
-  sensors: "Data sensor",
+  sensors: "Sensor Data",
   history: "Action History",
   profile: "Profile",
 };

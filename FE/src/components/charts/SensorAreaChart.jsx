@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Area,
   AreaChart,
@@ -20,7 +20,7 @@ function DarkTooltip({ active, payload, label, unit, decimals = 1 }) {
       : raw;
   return (
     <div className="chartTooltip">
-      <div className="chartTooltipMeta">Mẫu #{label}</div>
+      <div className="chartTooltipMeta">Sample #{label}</div>
       <div className="chartTooltipValue">
         {v}
         {unit ? <span className="chartTooltipUnit">{unit}</span> : null}
@@ -30,15 +30,41 @@ function DarkTooltip({ active, payload, label, unit, decimals = 1 }) {
 }
 
 /**
- * @param {object} props
- * @param {Array<{t:number,v:number}>} props.data
- * @param {string} props.color - stroke / accent
- * @param {string} props.gradientId - unique SVG id
- * @param {string} props.unit - hiển thị trong tooltip
- * @param {number} [props.decimals=1]
+ * @param {'temp'|'humidity'|'lightPct'} props.variant — Y-axis scale
  */
-export default function SensorAreaChart({ data, color, gradientId, unit, decimals = 1 }) {
+export default function SensorAreaChart({
+  data,
+  color,
+  gradientId,
+  unit,
+  decimals = 1,
+  variant = "temp",
+}) {
   const gid = `${gradientId}-fill`;
+
+  const maxT = useMemo(() => {
+    if (!data?.length) return 0;
+    return Math.max(...data.map((d) => d.t), 0);
+  }, [data]);
+
+  const xTicks = useMemo(() => {
+    const m = Math.max(maxT, 0);
+    const set = new Set();
+    for (let i = 0; i <= m; i += 5) set.add(i);
+    set.add(m);
+    return [...set].sort((a, b) => a - b);
+  }, [maxT]);
+
+  const yDomain = useMemo(() => {
+    const vals = (data || []).map((d) => d.v).filter((x) => Number.isFinite(x));
+    const maxV = vals.length ? Math.max(...vals) : 0;
+    const minV = vals.length ? Math.min(...vals) : 0;
+
+    if (variant === "humidity" || variant === "lightPct") return [0, 100];
+    // temp: avoid Recharts shrinking to ~[0,4] when values are flat
+    const hi = Math.max(25, maxV + 5, minV + 10);
+    return [0, Math.min(90, Math.ceil(hi))];
+  }, [data, variant]);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -58,22 +84,30 @@ export default function SensorAreaChart({ data, color, gradientId, unit, decimal
         />
 
         <XAxis
+          type="number"
           dataKey="t"
+          domain={[0, Math.max(maxT, 1)]}
+          ticks={xTicks}
           tickLine={false}
           axisLine={false}
           tick={{ fill: "rgba(255,255,255,0.38)", fontSize: 10 }}
-          minTickGap={28}
-          tickFormatter={(t) => (Number(t) % 15 === 0 ? String(t) : "")}
+          allowDecimals={false}
         />
 
         <YAxis
           tickLine={false}
           axisLine={false}
           width={36}
+          domain={yDomain}
           tick={{ fill: "rgba(255,255,255,0.38)", fontSize: 10 }}
-          domain={["auto", "auto"]}
           tickFormatter={(v) =>
-            typeof v === "number" ? (Number.isInteger(v) ? String(v) : v.toFixed(1)) : v
+            typeof v === "number"
+              ? variant === "temp"
+                ? Number.isInteger(v)
+                  ? String(v)
+                  : v.toFixed(1)
+                : String(Math.round(v))
+              : v
           }
         />
 

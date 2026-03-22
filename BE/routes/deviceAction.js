@@ -24,6 +24,12 @@ function createDeviceActionRouter(pool) {
       const { id: deviceId } = await ensureDeviceRow(conn, device, statusUpper);
       await conn.query("UPDATE devices SET device_state=? WHERE id=?", [statusUpper, deviceId]);
 
+      // Lệnh WAITING cũ cùng thiết bị → TIMEOUT (spam / lệnh mới thay thế, không cần trạng thái riêng)
+      await conn.query(
+        "UPDATE action_history SET status = 'TIMEOUT' WHERE device_id = ? AND status = 'WAITING'",
+        [deviceId]
+      );
+
       // action = lệnh ON/OFF; status = WAITING | ACK | TIMEOUT
       await conn.query(
         "INSERT INTO action_history (request_id, device_id, action, status, created_at) VALUES (?, ?, ?, ?, NOW())",

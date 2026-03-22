@@ -144,7 +144,7 @@ body{
   color:var(--muted-2);
 }
 
-/* 3 đồ thị cảm biến (Dashboard) */
+/* Dashboard: three sensor charts */
 .chartsGrid{
   margin-top:16px;
   display:grid;
@@ -182,7 +182,7 @@ body{
   position:relative;
   z-index:1;
 }
-/* Tooltip Recharts (theme tối) */
+/* Recharts tooltip (dark theme) */
 .chartTooltip{
   padding:10px 12px;
   border-radius:10px;
@@ -262,6 +262,17 @@ body{
   font-size:12px;
   width:64px;
 }
+.deviceToggleIcon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+.deviceToggleIconSpin{
+  animation: deviceIconSpin 0.85s linear infinite;
+}
+@keyframes deviceIconSpin{
+  to{ transform: rotate(360deg); }
+}
 .deviceState{
   color: var(--muted-2);
   font-size:11px;
@@ -269,6 +280,11 @@ body{
 }
 .deviceStateActive{ color: rgba(34,197,94,.95); }
 .deviceStateInactive{ color: rgba(255,255,255,.35); }
+.deviceStateWaiting{
+  color: rgba(250, 204, 21, .92);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
 
 /* Toggle */
 .toggle{
@@ -335,6 +351,191 @@ body{
   font-weight:900;
   color:var(--text);
 }
+
+/* Sensors page */
+.sensorsPanel .panelInner{
+  padding: 20px 20px 18px;
+}
+.sensorsToolbar{
+  margin-bottom: 14px;
+}
+.sensorsToolbarTitle{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.sensorsToolbarIcon{
+  color: var(--muted);
+  flex-shrink: 0;
+}
+/* Filters on one row below title */
+.sensorsFilterRow{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 14px;
+  width: 100%;
+}
+.sensorsFilterField{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+.sensorsFilterFieldGrow{
+  min-width: 0;
+  flex: 1 1 12rem;
+  max-width: 22rem;
+}
+.sensorsFilterField > label,
+.sensorsFilterFieldLabel{
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.sensorsFilterTimeBlock{
+  flex: 0 1 auto;
+}
+.sensorsFilterTimeBlock .sensorsFilterFieldLabel{
+  display: block;
+  margin-bottom: 0;
+}
+.sensorsSelect,
+.sensorsInput{
+  min-width: 0 !important;
+  width: 100%;
+  height: 36px;
+  border-radius: 10px;
+}
+.sensorsInputTime{
+  min-width: 0;
+  width: 7.25rem;
+  flex-shrink: 0;
+}
+.sensorsTimeRange{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.sensorsTimePair{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.sensorsTimePair label{
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sensorsTimeSep{
+  color: var(--muted-2);
+  padding-bottom: 0;
+  font-weight: 300;
+  user-select: none;
+  line-height: 36px;
+}
+.sensorsFilterActions{
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.sensorsClearBtn{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.sensorsClearBtn:hover:not(:disabled){
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.14);
+}
+.sensorsClearBtn:disabled{
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+/* Search + icon button on same row as Sensors filters */
+.sensorsInputRow{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.sensorsInputRow .sensorsInput{
+  flex: 1;
+  min-width: 0;
+}
+.sensorsSquareBtn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.sensorsSquareBtn:hover:not(:disabled){
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.14);
+}
+.sensorsSquareBtn:disabled{
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.sensorsTableWrap{
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+  overflow: hidden;
+  background: rgba(0,0,0,.15);
+}
+.sensorsTable{
+  margin: 0;
+}
+.sensorsTable thead th{
+  background: rgba(255,255,255,.03);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-2);
+}
+.sensorsNameCell{
+  font-weight: 800;
+}
+.sensorsValueCell{
+  font-variant-numeric: tabular-nums;
+}
+.sensorsTimeCell{
+  font-size: 12px;
+}
+.sensorsEmpty{
+  text-align: center;
+  padding: 36px 16px !important;
+  color: var(--muted-2);
+  font-size: 14px;
+}
 .toolbarLeft{
   display:flex;
   align-items:center;
@@ -361,11 +562,26 @@ body{
 .inputCompact{
   min-width: 200px;
 }
+.input[type="date"],
+.input[type="time"]{
+  color-scheme: dark;
+}
 .input[type="date"]{
   min-width: 170px;
 }
 .input[type="time"]{
   min-width: 140px;
+}
+/* Native calendar / clock icons (Chromium, Safari, Edge) — white on dark theme */
+.input[type="date"]::-webkit-calendar-picker-indicator,
+.input[type="time"]::-webkit-calendar-picker-indicator{
+  filter: invert(1);
+  opacity: 0.92;
+  cursor: pointer;
+}
+.input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.input[type="time"]::-webkit-calendar-picker-indicator:hover{
+  opacity: 1;
 }
 .select{
   height:32px;
@@ -417,7 +633,7 @@ body{
 .tagOn{ color: rgba(34,197,94,.95); font-weight:800; }
 .tagOff{ color: rgba(239,68,68,.95); font-weight:800; }
 .tagWait{ color: rgba(250,204,21,.95); font-weight:800; }
-/* Trạng thái xử lý lệnh (cột Status) */
+/* Action history status tags */
 .tagOk,
 .tagAck{ color: rgba(34,197,94,.95); font-weight:800; }
 .tagTimeout{ color: rgba(239,68,68,.95); font-weight:800; }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import AppShell from "./components/layout/AppShell";
 import Dashboard from "./pages/Dashboard";
 import Sensors from "./pages/Sensors";
@@ -12,6 +12,34 @@ import {
   sendDeviceAction,
 } from "./services/api";
 import { SENSOR_COLORS } from "./constants/theme";
+import { CHART_SAMPLE_COUNT } from "./constants/charts";
+
+/** Re-index t as 0..n-1 for X-axis; keep at most CHART_SAMPLE_COUNT points */
+function appendChartSample(prev, value) {
+  const vals = prev.length ? prev.map((p) => p.v) : [];
+  vals.push(value);
+  const trimmed = vals.slice(-CHART_SAMPLE_COUNT);
+  return trimmed.map((v, i) => ({ t: i, v }));
+}
+
+/** BE watchdog marks TIMEOUT after 10s; poll a bit longer to catch the update */
+const DEVICE_CMD_POLL_MS = 1000;
+const DEVICE_CMD_WINDOW_MS = 12000;
+
+function applyDeviceStates(devices, setFan, setLight, setProjector) {
+  if (!Array.isArray(devices)) return;
+  const byName = {};
+  for (const d of devices) {
+    if (!d?.name) continue;
+    byName[String(d.name).toLowerCase()] = d;
+  }
+  const fanDev = byName.fan;
+  const lightDev = byName.light;
+  const projDev = byName.projector;
+  if (fanDev) setFan(String(fanDev.device_state || "").toUpperCase() === "ON");
+  if (lightDev) setLight(String(lightDev.device_state || "").toUpperCase() === "ON");
+  if (projDev) setProjector(String(projDev.device_state || "").toUpperCase() === "ON");
+}
 
 export default function App() {
   const [page, setPage] = useState("dashboard");
@@ -31,25 +59,23 @@ export default function App() {
   const [chartLight, setChartLight] = useState([]);
   const [sensorRows, setSensorRows] = useState([]);
 
+  const devicePollRef = useRef(null);
+  const pollBusyRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      if (devicePollRef.current) {
+        clearInterval(devicePollRef.current);
+        devicePollRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const loadDevices = async () => {
       try {
         const devices = await fetchDevices();
-        if (Array.isArray(devices)) {
-          const byName = {};
-          devices.forEach((d) => {
-            if (!d.name) return;
-            byName[d.name.toLowerCase()] = d;
-          });
-
-          const fanDev = byName["fan"];
-          const lightDev = byName["light"];
-          const projDev = byName["projector"];
-
-          if (fanDev) setFan(String(fanDev.device_state || "").toUpperCase() === "ON");
-          if (lightDev) setLight(String(lightDev.device_state || "").toUpperCase() === "ON");
-          if (projDev) setProjector(String(projDev.device_state || "").toUpperCase() === "ON");
-        }
+        applyDeviceStates(devices, setFan, setLight, setProjector);
       } catch (e) {
         console.error("Failed to load devices", e);
       }
@@ -106,21 +132,9 @@ export default function App() {
         const hv = latest.humidity ? Number(latest.humidity.value || 0) : 0;
         const lv = latest.light ? Number(latest.light.value || 0) : 0;
 
-        setChartTemp((prev) => {
-          const next = [...prev, { t: prev.length, v: tv }];
-          if (next.length > 60) next.shift();
-          return next;
-        });
-        setChartHumidity((prev) => {
-          const next = [...prev, { t: prev.length, v: hv }];
-          if (next.length > 60) next.shift();
-          return next;
-        });
-        setChartLight((prev) => {
-          const next = [...prev, { t: prev.length, v: lv }];
-          if (next.length > 60) next.shift();
-          return next;
-        });
+        setChartTemp((prev) => appendChartSample(prev, tv));
+        setChartHumidity((prev) => appendChartSample(prev, hv));
+        setChartLight((prev) => appendChartSample(prev, lv));
       } catch (e) {
         console.error("Failed to load sensors", e);
       }
@@ -167,25 +181,85 @@ export default function App() {
     };
   }, [page]);
 
+  const syncDevicesAndHistory = async () => {
+    const [histRes, devices] = await Promise.all([
+      fetchActionHistory(200),
+      fetchDevices(),
+    ]);
+    if (histRes?.history && Array.isArray(histRes.history)) {
+      setHistory(histRes.history);
+    }
+    applyDeviceStates(devices, setFan, setLight, setProjector);
+  };
+
   const logAction = async (device, state) => {
     const cmd = state ? "ON" : "OFF";
-    const entry = {
-      id: history.length + 1,
-      device,
-      action: cmd,
-      status: "WAITING",
-      time: new Date().toLocaleTimeString(),
-    };
 
-    setHistory((h) => [entry, ...h]);
+    if (devicePollRef.current) {
+      clearInterval(devicePollRef.current);
+      devicePollRef.current = null;
+    }
 
     setPendingDevice(device);
+
+    const finishPending = () => {
+      if (devicePollRef.current) {
+        clearInterval(devicePollRef.current);
+        devicePollRef.current = null;
+      }
+      setPendingDevice(null);
+    };
+
     try {
-      await sendDeviceAction(device, cmd);
+      const res = await sendDeviceAction(device, cmd);
+      const requestId = res?.request_id;
+
+      await syncDevicesAndHistory();
+
+      const started = Date.now();
+
+      const tick = async () => {
+        if (pollBusyRef.current) return;
+        pollBusyRef.current = true;
+        try {
+          const [histRes, devices] = await Promise.all([
+            fetchActionHistory(200),
+            fetchDevices(),
+          ]);
+          const list = histRes?.history;
+          if (!Array.isArray(list)) return;
+
+          setHistory(list);
+          applyDeviceStates(devices, setFan, setLight, setProjector);
+
+          const row = requestId ? list.find((h) => h.request_id === requestId) : null;
+          const stillWaiting =
+            row && String(row.status || "").toUpperCase() === "WAITING";
+          const elapsed = Date.now() - started;
+
+          if (!stillWaiting || elapsed >= DEVICE_CMD_WINDOW_MS) {
+            finishPending();
+            if (stillWaiting && elapsed >= DEVICE_CMD_WINDOW_MS) {
+              await syncDevicesAndHistory();
+            }
+          }
+        } catch (e) {
+          console.error("Device command poll failed", e);
+        } finally {
+          pollBusyRef.current = false;
+        }
+      };
+
+      devicePollRef.current = setInterval(tick, DEVICE_CMD_POLL_MS);
+      void tick();
     } catch (e) {
       console.error("Failed to send device action", e);
-    } finally {
-      setPendingDevice(null);
+      finishPending();
+      try {
+        await syncDevicesAndHistory();
+      } catch (e2) {
+        console.error("Failed to sync after error", e2);
+      }
     }
   };
 

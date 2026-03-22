@@ -1,4 +1,4 @@
-/** Màu biểu đồ / metric theo loại cảm biến */
+/** Chart / metric colors by sensor type */
 export const SENSOR_COLORS = {
   temp: "#ff4d4f",
   humidity: "#3b82f6",

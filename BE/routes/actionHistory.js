@@ -22,7 +22,7 @@ function createActionHistoryRouter(pool) {
   });
 
   r.post("/", async (req, res) => {
-    // action = ON | OFF (lệnh); status = WAITING | ACK | TIMEOUT
+    // action = ON | OFF; status = WAITING | ACK | TIMEOUT
     const { request_id, device_id, action, status } = req.body;
     if (!request_id || !device_id || !action || !status) {
       return res.status(400).json({ error: "Missing fields" });

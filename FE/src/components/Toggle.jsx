@@ -1,9 +1,11 @@
 import React from "react";
 
-export default function Toggle({ icon, label, value, setValue, disabled = false }) {
+export default function Toggle({ icon, label, value, setValue, disabled = false, pending = false }) {
   return (
     <>
-      {icon}
+      <span className={pending ? "deviceToggleIcon deviceToggleIconSpin" : "deviceToggleIcon"}>
+        {icon}
+      </span>
       <span className="deviceLabel">{label}</span>
 
       <div

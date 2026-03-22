@@ -10,9 +10,9 @@ export default function Profile() {
             <div className="avatar" />
 
             <div>
-              <div className="profileName">Lê Việt Tuấn</div>
-              <div className="profileMeta">B22DCPT247</div>
-              <div className="profileMeta">IoT Dashboard Demo</div>
+              <div className="profileName">Demo User</div>
+              <div className="profileMeta">Student ID · B22DCPT247</div>
+              <div className="profileMeta">IoT dashboard demo</div>
             </div>
           </div>
         </div>

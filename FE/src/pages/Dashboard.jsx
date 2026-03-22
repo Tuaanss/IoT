@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Droplets,
   Fan,
@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Toggle from "../components/Toggle";
 import SensorAreaChart from "../components/charts/SensorAreaChart";
+import { adcToBrightnessPercent } from "../constants/charts";
 
 function StatTile({ title, value, icon }) {
   return (
@@ -23,7 +24,17 @@ function StatTile({ title, value, icon }) {
   );
 }
 
-function SensorChartCard({ title, subtitle, icon, data, color, gradientId, unit, decimals }) {
+function SensorChartCard({
+  title,
+  subtitle,
+  icon,
+  data,
+  color,
+  gradientId,
+  unit,
+  decimals,
+  variant,
+}) {
   return (
     <div className="chartCell">
       <div className="panelInner">
@@ -43,6 +54,7 @@ function SensorChartCard({ title, subtitle, icon, data, color, gradientId, unit,
             gradientId={gradientId}
             unit={unit}
             decimals={decimals}
+            variant={variant}
           />
         </div>
       </div>
@@ -68,10 +80,12 @@ export default function Dashboard({
   pendingDevice,
 }) {
   const lv = Number(lightLevel);
-  const lightPct = Number.isFinite(lv)
-    ? Math.round((Math.max(0, Math.min(1023, lv)) / 1023) * 100)
-    : 0;
-  const lightDisplay = Number.isFinite(lv) ? `${Math.round(lv)} (${lightPct}%)` : "—";
+  const lightPct = adcToBrightnessPercent(lv);
+
+  const chartLightPct = useMemo(
+    () => chartLight.map(({ t, v }) => ({ t, v: adcToBrightnessPercent(v) })),
+    [chartLight]
+  );
 
   return (
     <>
@@ -87,8 +101,8 @@ export default function Dashboard({
           icon={<Droplets size={14} color={colors.humidity} />}
         />
         <StatTile
-          title="Light (ADC)"
-          value={lightDisplay}
+          title="Light"
+          value={`${lightPct}%`}
           icon={<Sun size={14} color={colors.light} />}
         />
       </div>
@@ -96,33 +110,36 @@ export default function Dashboard({
       <div className="chartsGrid">
         <SensorChartCard
           title="Temperature"
-          subtitle="60 mẫu gần nhất · ~2s/lần"
+          subtitle="30 most recent samples"
           icon={<Thermometer size={14} />}
           data={chartTemp}
           color={colors.temp}
           gradientId="gradTemp"
           unit="°C"
           decimals={1}
+          variant="temp"
         />
         <SensorChartCard
           title="Humidity"
-          subtitle="60 mẫu gần nhất · ~2s/lần"
+          subtitle="30 most recent samples"
           icon={<Droplets size={14} />}
           data={chartHumidity}
           color={colors.humidity}
           gradientId="gradHum"
           unit="%"
           decimals={1}
+          variant="humidity"
         />
         <SensorChartCard
-          title="Light (ADC)"
-          subtitle="Giá trị 0–1023 (ESP8266 ADC)"
+          title="Light"
+          subtitle="30 most recent samples"
           icon={<Sun size={14} />}
-          data={chartLight}
+          data={chartLightPct}
           color={colors.light}
           gradientId="gradLight"
-          unit="ADC"
+          unit="%"
           decimals={0}
+          variant="lightPct"
         />
       </div>
 
@@ -140,14 +157,23 @@ export default function Dashboard({
               icon={<Fan size={16} />}
               label="Fan"
               value={fan}
+              pending={pendingDevice === "Fan"}
               disabled={pendingDevice === "Fan"}
               setValue={(v) => {
                 setFan(v);
                 logAction("Fan", v);
               }}
             />
-            <span className={`deviceState ${fan ? "deviceStateActive" : "deviceStateInactive"}`}>
-              {pendingDevice === "Fan" ? "Waiting..." : fan ? "Active" : "Inactive"}
+            <span
+              className={`deviceState ${
+                pendingDevice === "Fan"
+                  ? "deviceStateWaiting"
+                  : fan
+                    ? "deviceStateActive"
+                    : "deviceStateInactive"
+              }`}
+            >
+              {pendingDevice === "Fan" ? "WAITING" : fan ? "Active" : "Inactive"}
             </span>
           </div>
 
@@ -156,6 +182,7 @@ export default function Dashboard({
               icon={<Lightbulb size={16} />}
               label="Light"
               value={light}
+              pending={pendingDevice === "Light"}
               disabled={pendingDevice === "Light"}
               setValue={(v) => {
                 setLight(v);
@@ -163,9 +190,15 @@ export default function Dashboard({
               }}
             />
             <span
-              className={`deviceState ${light ? "deviceStateActive" : "deviceStateInactive"}`}
+              className={`deviceState ${
+                pendingDevice === "Light"
+                  ? "deviceStateWaiting"
+                  : light
+                    ? "deviceStateActive"
+                    : "deviceStateInactive"
+              }`}
             >
-              {pendingDevice === "Light" ? "Waiting..." : light ? "Active" : "Inactive"}
+              {pendingDevice === "Light" ? "WAITING" : light ? "Active" : "Inactive"}
             </span>
           </div>
 
@@ -174,6 +207,7 @@ export default function Dashboard({
               icon={<Projector size={16} />}
               label="Projector"
               value={projector}
+              pending={pendingDevice === "Projector"}
               disabled={pendingDevice === "Projector"}
               setValue={(v) => {
                 setProjector(v);
@@ -182,10 +216,14 @@ export default function Dashboard({
             />
             <span
               className={`deviceState ${
-                projector ? "deviceStateActive" : "deviceStateInactive"
+                pendingDevice === "Projector"
+                  ? "deviceStateWaiting"
+                  : projector
+                    ? "deviceStateActive"
+                    : "deviceStateInactive"
               }`}
             >
-              {pendingDevice === "Projector" ? "Waiting..." : projector ? "Active" : "Inactive"}
+              {pendingDevice === "Projector" ? "WAITING" : projector ? "Active" : "Inactive"}
             </span>
           </div>
         </div>
