@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Env (không commit secret)
+.env
+.env.local
+**/.env
+!**/.env.example
+
+# Build
+dist/
+dist-ssr/
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json

@@ -150,5 +150,3 @@ export default function HistoryPage({ history }) {
     </div>
   );
 }
-
-

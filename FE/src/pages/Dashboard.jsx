@@ -17,7 +17,7 @@ import {
   Sun,
   Thermometer,
 } from "lucide-react";
-import Toggle from "./Toggle";
+import Toggle from "../components/Toggle";
 
 function Metric({
   title,
@@ -69,13 +69,23 @@ export default function Dashboard({
 }) {
   const maxV = chart.reduce((m, p) => (p.v > m ? p.v : m), -Infinity);
   const minV = chart.reduce((m, p) => (p.v < m ? p.v : m), Infinity);
-  const unit = sensorView === "temp" ? "°C" : sensorView === "humidity" ? "%" : "lux";
+  const lightIsBright = Number(lightLevel) >= 512;
+  const lightText = lightIsBright ? "Bright" : "Dark";
+
+  const fmt = (v) => {
+    if (!Number.isFinite(v)) return "-";
+    if (sensorView === "temp") return `${v.toFixed(1)} °C`;
+    if (sensorView === "humidity") return `${v.toFixed(1)} %`;
+    const pct = Math.round((Math.max(0, Math.min(1023, v)) / 1023) * 100);
+    return `${pct} %`;
+  };
+
   const chartTitle =
     sensorView === "temp"
       ? "Temperature History"
       : sensorView === "humidity"
         ? "Humidity History"
-        : "Light Intensity History";
+        : "Light Level History";
 
   return (
     <>
@@ -100,7 +110,7 @@ export default function Dashboard({
         />
         <Metric
           title="Light Level"
-          value={`${lightLevel}lx`}
+          value={lightText}
           sensorKey="light"
           sensorView={sensorView}
           setSensorView={setSensorView}
@@ -160,15 +170,11 @@ export default function Dashboard({
         <div className="statsCol">
           <div className="statCard">
             <div className="statLabel">Max</div>
-            <div className="statValue">
-              {Number.isFinite(maxV) ? `${maxV.toFixed(1)} ${unit}` : "-"}
-            </div>
+            <div className="statValue">{fmt(maxV)}</div>
           </div>
           <div className="statCard">
             <div className="statLabel">Min</div>
-            <div className="statValue">
-              {Number.isFinite(minV) ? `${minV.toFixed(1)} ${unit}` : "-"}
-            </div>
+            <div className="statValue">{fmt(minV)}</div>
           </div>
         </div>
       </div>
@@ -240,4 +246,3 @@ export default function Dashboard({
     </>
   );
 }
-

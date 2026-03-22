@@ -283,6 +283,12 @@ body{
   gap:10px;
   flex-wrap:wrap;
 }
+.toolbarFilters .inputCompact{
+  min-width: 160px;
+}
+.toolbarFilters .select{
+  min-width: 140px;
+}
 .toolbarTitle{
   font-weight:900;
   color:var(--text);
@@ -316,6 +322,9 @@ body{
 .input[type="date"]{
   min-width: 170px;
 }
+.input[type="time"]{
+  min-width: 140px;
+}
 .select{
   height:32px;
   border-radius:9px;
@@ -324,6 +333,10 @@ body{
   color:var(--text);
   padding:0 8px;
   outline:none;
+}
+.select option{
+  background: #0f141b;
+  color: var(--text);
 }
 .pill{
   height:28px;

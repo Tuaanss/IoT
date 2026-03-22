@@ -23,7 +23,7 @@ export default function Sensors({ rows }) {
         if (!timeFrom && !timeTo) return true;
         const dt = new Date(r.time);
         if (Number.isNaN(dt.getTime())) return true;
-        const hhmmss = dt.toTimeString().slice(0, 8); // HH:MM:SS
+        const hhmmss = dt.toTimeString().slice(0, 8);
         if (timeFrom && hhmmss < `${timeFrom}:00`) return false;
         if (timeTo && hhmmss > `${timeTo}:59`) return false;
         return true;
@@ -177,5 +177,3 @@ export default function Sensors({ rows }) {
     </div>
   );
 }
-
-

@@ -1,0 +1,13 @@
+{
+  "name": "iot-smart-home",
+  "private": true,
+  "description": "IoT dashboard: FE + BE + ESP (scripts chạy từ root)",
+  "scripts": {
+    "install:all": "npm install --prefix FE && npm install --prefix BE",
+    "dev:fe": "npm run dev --prefix FE",
+    "dev:be": "npm run dev --prefix BE",
+    "start:be": "npm start --prefix BE",
+    "build:fe": "npm run build --prefix FE",
+    "preview:fe": "npm run preview --prefix FE"
+  }
+}

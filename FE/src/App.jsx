@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { Database, History, LayoutDashboard, User } from "lucide-react";
-import Dashboard from "./components/Dashboard";
-import Sensors from "./components/Sensors";
-import HistoryPage from "./components/HistoryPage";
-import Profile from "./components/Profile";
-import NavItem from "./components/NavItem";
-import { fetchActionHistory, fetchDevices, fetchLatestSensors, sendDeviceAction } from "./api";
+import AppShell from "./components/layout/AppShell";
+import Dashboard from "./pages/Dashboard";
+import Sensors from "./pages/Sensors";
+import HistoryPage from "./pages/HistoryPage";
+import Profile from "./pages/Profile";
+import {
+  fetchActionHistory,
+  fetchDevices,
+  fetchLatestSensors,
+  fetchSensorData,
+  sendDeviceAction,
+} from "./services/api";
+import { SENSOR_COLORS, CARD_STYLE } from "./constants/theme";
 
 export default function App() {
   const [page, setPage] = useState("dashboard");
@@ -24,7 +30,6 @@ export default function App() {
   const [chart, setChart] = useState([]);
   const [sensorRows, setSensorRows] = useState([]);
 
-  // Load initial device states from backend
   useEffect(() => {
     const loadDevices = async () => {
       try {
@@ -32,17 +37,17 @@ export default function App() {
         if (Array.isArray(devices)) {
           const byName = {};
           devices.forEach((d) => {
-            if (!d.device_name) return;
-            byName[d.device_name.toLowerCase()] = d;
+            if (!d.name) return;
+            byName[d.name.toLowerCase()] = d;
           });
 
           const fanDev = byName["fan"];
           const lightDev = byName["light"];
           const projDev = byName["projector"];
 
-          if (fanDev) setFan(Boolean(fanDev.status));
-          if (lightDev) setLight(Boolean(lightDev.status));
-          if (projDev) setProjector(Boolean(projDev.status));
+          if (fanDev) setFan(String(fanDev.device_state || "").toUpperCase() === "ON");
+          if (lightDev) setLight(String(lightDev.device_state || "").toUpperCase() === "ON");
+          if (projDev) setProjector(String(projDev.device_state || "").toUpperCase() === "ON");
         }
       } catch (e) {
         console.error("Failed to load devices", e);
@@ -51,7 +56,6 @@ export default function App() {
     loadDevices();
   }, []);
 
-  // Load initial history from backend
   useEffect(() => {
     const loadHistory = async () => {
       try {
@@ -66,8 +70,6 @@ export default function App() {
     loadHistory();
   }, []);
 
-  // When user navigates to Action History, refetch from DB.
-  // This fixes the case where backend was down during initial load.
   useEffect(() => {
     if (page !== "history") return;
 
@@ -85,7 +87,6 @@ export default function App() {
     loadHistory();
   }, [page]);
 
-  // Poll latest sensor values from backend every 2s
   useEffect(() => {
     let isCancelled = false;
 
@@ -94,15 +95,11 @@ export default function App() {
         const data = await fetchLatestSensors();
         if (!data || !data.latest || isCancelled) return;
 
-        const { latest, rows } = data;
+        const { latest } = data;
 
         if (latest.temp) setTemp(Number(latest.temp.value || 0));
         if (latest.humidity) setHumidity(Number(latest.humidity.value || 0));
         if (latest.light) setLightLevel(Number(latest.light.value || 0));
-
-        if (Array.isArray(rows)) {
-          setSensorRows(rows);
-        }
 
         setChart((prev) => {
           const nextVal =
@@ -130,6 +127,38 @@ export default function App() {
     };
   }, [sensorView]);
 
+  useEffect(() => {
+    if (page !== "sensors") return;
+
+    let isCancelled = false;
+
+    const loadLog = async () => {
+      try {
+        const rows = await fetchSensorData({ limit: 200 });
+        if (isCancelled || !Array.isArray(rows)) return;
+
+        const mapped = rows.map((r) => ({
+          id: r.id,
+          name: r.sensor_name,
+          type: r.sensor_id,
+          value: `${r.value}`,
+          time: r.created_at,
+        }));
+        setSensorRows(mapped);
+      } catch (e) {
+        console.error("Failed to load sensor data log", e);
+      }
+    };
+
+    loadLog();
+    const i = setInterval(loadLog, 2000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(i);
+    };
+  }, [page]);
+
   const logAction = async (device, state) => {
     const entry = {
       id: history.length + 1,
@@ -150,19 +179,6 @@ export default function App() {
     }
   };
 
-  const colors = {
-    temp: "#ff4d4f",
-    humidity: "#3b82f6",
-    light: "#facc15",
-  };
-
-  const card = {
-    background: "linear-gradient(145deg,#1a1d23,#111317)",
-    borderRadius: 16,
-    padding: 22,
-    boxShadow: "0 0 0 1px rgba(255,255,255,0.03),0 10px 40px rgba(0,0,0,0.7)",
-  };
-
   const renderPage = () => {
     if (page === "dashboard") {
       return (
@@ -173,8 +189,8 @@ export default function App() {
           sensorView={sensorView}
           setSensorView={setSensorView}
           chart={chart}
-          colors={colors}
-          card={card}
+          colors={SENSOR_COLORS}
+          card={CARD_STYLE}
           fan={fan}
           setFan={setFan}
           light={light}
@@ -188,11 +204,7 @@ export default function App() {
     }
 
     if (page === "sensors") {
-      return (
-        <Sensors
-          rows={sensorRows}
-        />
-      );
+      return <Sensors rows={sensorRows} />;
     }
 
     if (page === "history") return <HistoryPage history={history} />;
@@ -201,54 +213,8 @@ export default function App() {
   };
 
   return (
-    <div className="appShell">
-      <div className="sidebar">
-        <div className="brand">SmartHome</div>
-
-        <div className="nav">
-          <NavItem
-            icon={<LayoutDashboard size={18} />}
-            label="Dashboard"
-            id="dashboard"
-            page={page}
-            setPage={setPage}
-          />
-          <NavItem
-            icon={<Database size={18} />}
-            label="Sensors Data"
-            id="sensors"
-            page={page}
-            setPage={setPage}
-          />
-          <NavItem
-            icon={<History size={18} />}
-            label="Action History"
-            id="history"
-            page={page}
-            setPage={setPage}
-          />
-          <NavItem
-            icon={<User size={18} />}
-            label="Profile"
-            id="profile"
-            page={page}
-            setPage={setPage}
-          />
-        </div>
-      </div>
-
-      <div className="content">
-        <div className="pageTitle">
-          <h2>
-            {page === "dashboard" && "Overview"}
-            {page === "sensors" && "Data sensor"}
-            {page === "history" && "Action History"}
-            {page === "profile" && "Profile"}
-          </h2>
-        </div>
-
-        {renderPage()}
-      </div>
-    </div>
+    <AppShell page={page} setPage={setPage}>
+      {renderPage()}
+    </AppShell>
   );
 }
