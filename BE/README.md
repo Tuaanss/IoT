@@ -23,7 +23,7 @@ Mặc định `PORT=4000`.
 | `config.js` | Đọc `.env` |
 | `routes/` | REST: devices, sensors, sensor-data, action-history, device-action, … |
 | `mqtt/client.js` | Subscribe/publish topic |
-| `mqtt/state.js` | Trạng thái chung (pending ACK, …) |
+| `mqtt/state.js` | Trạng thái chung (lệnh chờ ESP, …) |
 | `db/pool.js` | Pool MySQL |
 | `lib/` | `deviceHelpers`, `sensorMap` |
 

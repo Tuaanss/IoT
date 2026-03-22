@@ -1,5 +1,5 @@
 /*
-  ESP8266 + DHT11 + LDR + 3 LED devices
+  ESP8266 + DHT11 + LDR (A0 analog hoặc D1 digital) + 3 LED devices
 
   - Publishes sensors to MQTT topic: data_sensor
   - Subscribes to MQTT topic: device_control (JSON commands)
@@ -34,10 +34,16 @@ const char* ROOM_ID = "401";
 // ===== CẤU HÌNH CHÂN CẮM =====
 #define DHT_PIN 4       // D2
 #define DHTTYPE DHT11
-// LDR module is 3-pin (VCC/GND/DO), DO is wired to D1 (GPIO5)
-#define LDR_DO_PIN 5    // D1 (GPIO5)
-// If your module outputs LOW when bright, set this to 1 to invert
-#define LDR_DO_INVERT 0
+
+// LDR: chọn 1 trong 2
+// - LDR_USE_ANALOG = 1: cảm biến quang trở nối A0 (ADC 0–1023, ESP8266)
+// - LDR_USE_ANALOG = 0: module 3 chân DO nối D1 (digital → map 0/1023)
+#define LDR_USE_ANALOG 1
+
+#if !LDR_USE_ANALOG
+#define LDR_DO_PIN 5    // D1 (GPIO5) — chân DO module LDR
+#define LDR_DO_INVERT 0 // 1 nếu sáng = LOW
+#endif
 
 // 3 LED biểu thị 3 thiết bị (Fan / Light / Projector)
 #define LED_FAN 14      // D5
@@ -198,12 +204,21 @@ static void ensureMqtt() {
 static void publishSensors() {
   float h = dht.readHumidity();
   float t = dht.readTemperature();
-  // Digital LDR: map to 0/1023 so the web chart still works
-  int raw = digitalRead(LDR_DO_PIN); // HIGH/LOW
-  if (LDR_DO_INVERT) raw = !raw;
-  const int ldr = raw ? 1023 : 0;
 
-  // Always publish LDR analog; temp/hum only if DHT reads OK.
+  int ldr;
+  int rawDig = 0;
+#if LDR_USE_ANALOG
+  // ESP8266: chỉ có ADC trên A0, giá trị ~0 (tối) … 1023 (sáng), tùy mạch phân áp
+  ldr = analogRead(A0);
+  if (ldr < 0) ldr = 0;
+  if (ldr > 1023) ldr = 1023;
+#else
+  rawDig = digitalRead(LDR_DO_PIN);
+  if (LDR_DO_INVERT) rawDig = !rawDig;
+  ldr = rawDig ? 1023 : 0;
+#endif
+
+  // Luôn gửi light; temp/hum chỉ khi DHT đọc được.
   StaticJsonDocument<224> doc;
   doc["room_id"] = ROOM_ID;
   doc["light"] = ldr;
@@ -216,10 +231,13 @@ static void publishSensors() {
   const size_t n = serializeJson(doc, out, sizeof(out));
   mqtt.publish(T_SENSOR, out, n);
 
-  // Debug to Serial so you can verify ADC is working
+#if LDR_USE_ANALOG
+  Serial.print("LDR(A0 ADC)=");
+#else
   Serial.print("LDR(DO@D1) raw=");
-  Serial.print(raw);
+  Serial.print(rawDig);
   Serial.print(" light=");
+#endif
   Serial.print(ldr);
   if (!isnan(t)) {
     Serial.print(" temp=");
@@ -243,7 +261,9 @@ void setup() {
   pinMode(LED_FAN, OUTPUT);
   pinMode(LED_LIGHT, OUTPUT);
   pinMode(LED_PROJECTOR, OUTPUT);
+#if !LDR_USE_ANALOG
   pinMode(LDR_DO_PIN, INPUT);
+#endif
   setLed(LED_FAN, stFan);
   setLed(LED_LIGHT, stLight);
   setLed(LED_PROJECTOR, stProjector);

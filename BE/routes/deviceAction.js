@@ -24,9 +24,10 @@ function createDeviceActionRouter(pool) {
       const { id: deviceId } = await ensureDeviceRow(conn, device, statusUpper);
       await conn.query("UPDATE devices SET device_state=? WHERE id=?", [statusUpper, deviceId]);
 
+      // action = lệnh ON/OFF; status = WAITING | ACK | TIMEOUT
       await conn.query(
         "INSERT INTO action_history (request_id, device_id, action, status, created_at) VALUES (?, ?, ?, ?, NOW())",
-        [requestId, deviceId, "WAITING", statusUpper]
+        [requestId, deviceId, statusUpper, "WAITING"]
       );
 
       await conn.commit();
@@ -60,15 +61,11 @@ function createDeviceActionRouter(pool) {
           await c.query("UPDATE devices SET device_state=? WHERE id=?", ["OFF", id]);
           await c.query(
             `UPDATE action_history
-             SET action = 'TIMEOUT', status = 'OFF'
-             WHERE device_id = ? AND action = 'WAITING'
+             SET status = 'TIMEOUT'
+             WHERE device_id = ? AND status = 'WAITING'
              ORDER BY created_at DESC, id DESC
              LIMIT 1`,
             [id]
-          );
-          await c.query(
-            "INSERT INTO action_history (request_id, device_id, action, status, created_at) VALUES (?, ?, ?, ?, NOW())",
-            [String(Date.now()), id, "TIMEOUT", "OFF"]
           );
           await c.commit();
         } catch (e) {

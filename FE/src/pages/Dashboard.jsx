@@ -1,14 +1,5 @@
 import React from "react";
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
   Droplets,
   Fan,
   Lightbulb,
@@ -18,28 +9,11 @@ import {
   Thermometer,
 } from "lucide-react";
 import Toggle from "../components/Toggle";
+import SensorAreaChart from "../components/charts/SensorAreaChart";
 
-function Metric({
-  title,
-  value,
-  sensorKey,
-  sensorView,
-  setSensorView,
-  colors,
-  icon,
-}) {
-  const active =
-    sensorKey === "temp"
-      ? "metricActiveRed"
-      : sensorKey === "humidity"
-        ? "metricActiveBlue"
-        : "metricActiveYellow";
-
+function StatTile({ title, value, icon }) {
   return (
-    <div
-      onClick={() => setSensorView(sensorKey)}
-      className={`panel metric ${sensorView === sensorKey ? active : ""}`}
-    >
+    <div className="panel metric">
       <div className="metricHeader">
         {icon}
         <span>{title}</span>
@@ -49,15 +23,41 @@ function Metric({
   );
 }
 
+function SensorChartCard({ title, subtitle, icon, data, color, gradientId, unit, decimals }) {
+  return (
+    <div className="chartCell">
+      <div className="panelInner">
+        <div className="sectionTitle">
+          <span className="pill" style={{ color }}>
+            {icon}
+          </span>
+          <div>
+            <div>{title}</div>
+            <div className="sectionSub">{subtitle}</div>
+          </div>
+        </div>
+        <div className="chartBox">
+          <SensorAreaChart
+            data={data}
+            color={color}
+            gradientId={gradientId}
+            unit={unit}
+            decimals={decimals}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard({
   temp,
   humidity,
   lightLevel,
-  sensorView,
-  setSensorView,
-  chart,
+  chartTemp,
+  chartHumidity,
+  chartLight,
   colors,
-  card,
   fan,
   setFan,
   light,
@@ -67,116 +67,63 @@ export default function Dashboard({
   logAction,
   pendingDevice,
 }) {
-  const maxV = chart.reduce((m, p) => (p.v > m ? p.v : m), -Infinity);
-  const minV = chart.reduce((m, p) => (p.v < m ? p.v : m), Infinity);
-  const lightIsBright = Number(lightLevel) >= 512;
-  const lightText = lightIsBright ? "Bright" : "Dark";
-
-  const fmt = (v) => {
-    if (!Number.isFinite(v)) return "-";
-    if (sensorView === "temp") return `${v.toFixed(1)} °C`;
-    if (sensorView === "humidity") return `${v.toFixed(1)} %`;
-    const pct = Math.round((Math.max(0, Math.min(1023, v)) / 1023) * 100);
-    return `${pct} %`;
-  };
-
-  const chartTitle =
-    sensorView === "temp"
-      ? "Temperature History"
-      : sensorView === "humidity"
-        ? "Humidity History"
-        : "Light Level History";
+  const lv = Number(lightLevel);
+  const lightPct = Number.isFinite(lv)
+    ? Math.round((Math.max(0, Math.min(1023, lv)) / 1023) * 100)
+    : 0;
+  const lightDisplay = Number.isFinite(lv) ? `${Math.round(lv)} (${lightPct}%)` : "—";
 
   return (
     <>
       <div className="gridTop">
-        <Metric
+        <StatTile
           title="Temperature"
           value={`${temp} °C`}
-          sensorKey="temp"
-          sensorView={sensorView}
-          setSensorView={setSensorView}
-          colors={colors}
           icon={<Thermometer size={14} color={colors.temp} />}
         />
-        <Metric
+        <StatTile
           title="Humidity"
           value={`${humidity}%`}
-          sensorKey="humidity"
-          sensorView={sensorView}
-          setSensorView={setSensorView}
-          colors={colors}
           icon={<Droplets size={14} color={colors.humidity} />}
         />
-        <Metric
-          title="Light Level"
-          value={lightText}
-          sensorKey="light"
-          sensorView={sensorView}
-          setSensorView={setSensorView}
-          colors={colors}
+        <StatTile
+          title="Light (ADC)"
+          value={lightDisplay}
           icon={<Sun size={14} color={colors.light} />}
         />
       </div>
 
-      <div className="chartRow">
-        <div className="panel chartWrap">
-          <div className="panelInner">
-            <div className="sectionTitle">
-              <span className="pill">
-                {sensorView === "temp" ? (
-                  <Thermometer size={14} />
-                ) : sensorView === "humidity" ? (
-                  <Droplets size={14} />
-                ) : (
-                  <Sun size={14} />
-                )}
-              </span>
-              <div>
-                <div>{chartTitle}</div>
-                <div className="sectionSub">Last 60 seconds of data</div>
-              </div>
-            </div>
-
-            <div className="chartBox">
-              <ResponsiveContainer>
-                <AreaChart data={chart}>
-                  <defs>
-                    <linearGradient id="color" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={colors[sensorView]} stopOpacity={0.55} />
-                      <stop offset="95%" stopColor={colors[sensorView]} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-
-                  <CartesianGrid stroke="rgba(255,255,255,.06)" />
-                  <XAxis dataKey="t" stroke="rgba(255,255,255,.35)" />
-                  <YAxis stroke="rgba(255,255,255,.35)" />
-                  <Tooltip />
-
-                  <Area
-                    type="monotone"
-                    dataKey="v"
-                    stroke={colors[sensorView]}
-                    strokeWidth={3}
-                    fill="url(#color)"
-                    dot={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        <div className="statsCol">
-          <div className="statCard">
-            <div className="statLabel">Max</div>
-            <div className="statValue">{fmt(maxV)}</div>
-          </div>
-          <div className="statCard">
-            <div className="statLabel">Min</div>
-            <div className="statValue">{fmt(minV)}</div>
-          </div>
-        </div>
+      <div className="chartsGrid">
+        <SensorChartCard
+          title="Temperature"
+          subtitle="60 mẫu gần nhất · ~2s/lần"
+          icon={<Thermometer size={14} />}
+          data={chartTemp}
+          color={colors.temp}
+          gradientId="gradTemp"
+          unit="°C"
+          decimals={1}
+        />
+        <SensorChartCard
+          title="Humidity"
+          subtitle="60 mẫu gần nhất · ~2s/lần"
+          icon={<Droplets size={14} />}
+          data={chartHumidity}
+          color={colors.humidity}
+          gradientId="gradHum"
+          unit="%"
+          decimals={1}
+        />
+        <SensorChartCard
+          title="Light (ADC)"
+          subtitle="Giá trị 0–1023 (ESP8266 ADC)"
+          icon={<Sun size={14} />}
+          data={chartLight}
+          color={colors.light}
+          gradientId="gradLight"
+          unit="ADC"
+          decimals={0}
+        />
       </div>
 
       <div className="panel deviceBar">

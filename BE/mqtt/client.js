@@ -86,20 +86,20 @@ function initMqttClient(pool) {
           await conn.beginTransaction();
 
           for (const u of updates) {
-            const { id: deviceId, prevState } = await ensureDeviceRow(conn, u.device, u.statusUpper);
+            const { id: deviceId } = await ensureDeviceRow(conn, u.device, u.statusUpper);
 
             await conn.query("UPDATE devices SET device_state=? WHERE id=?", [u.statusUpper, deviceId]);
 
             const [updWaiting] = await conn.query(
               `UPDATE action_history
-               SET action = ?, status = ?
-               WHERE device_id = ? AND action = 'WAITING'
+               SET status = 'ACK'
+               WHERE device_id = ? AND status = 'WAITING' AND action = ?
                ORDER BY created_at DESC, id DESC
                LIMIT 1`,
-              [u.statusUpper, u.statusUpper, deviceId]
+              [deviceId, u.statusUpper]
             );
             if (updWaiting && typeof updWaiting.affectedRows === "number" && updWaiting.affectedRows > 0) {
-              console.log("Resolved WAITING ->", u.statusUpper, "for", u.device);
+              console.log("Resolved WAITING -> ACK for", u.device, u.statusUpper);
             }
 
             const devKey = String(u.device).toLowerCase();
@@ -111,12 +111,6 @@ function initMqttClient(pool) {
               state.pendingDeviceCmd.delete(devKey);
             }
 
-            if (!prevState || prevState !== u.statusUpper) {
-              await conn.query(
-                "INSERT INTO action_history (request_id, device_id, action, status, created_at) VALUES (?, ?, ?, ?, NOW())",
-                [String(Date.now()), deviceId, "REPORT", u.statusUpper]
-              );
-            }
           }
 
           await conn.commit();

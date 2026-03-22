@@ -115,7 +115,6 @@ body{
 }
 .metric{
   padding:16px 16px;
-  cursor:pointer;
   position:relative;
 }
 .metricHeader{
@@ -130,9 +129,6 @@ body{
   font-size:30px;
   font-weight:800;
 }
-.metricActiveRed{ box-shadow: 0 0 0 1px rgba(255,77,79,.60) inset, 0 0 22px rgba(255,77,79,.12); }
-.metricActiveBlue{ box-shadow: 0 0 0 1px rgba(59,130,246,.60) inset, 0 0 22px rgba(59,130,246,.12); }
-.metricActiveYellow{ box-shadow: 0 0 0 1px rgba(250,204,21,.55) inset, 0 0 22px rgba(250,204,21,.10); }
 
 .sectionTitle{
   font-weight:800;
@@ -148,6 +144,72 @@ body{
   color:var(--muted-2);
 }
 
+/* 3 đồ thị cảm biến (Dashboard) */
+.chartsGrid{
+  margin-top:16px;
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap:14px;
+  align-items:stretch;
+}
+.chartCell{
+  padding:0;
+  overflow:hidden;
+  border-radius:16px;
+  border:1px solid var(--stroke);
+  background: linear-gradient(
+    165deg,
+    rgba(255,255,255,.06) 0%,
+    rgba(255,255,255,.025) 40%,
+    rgba(10,14,20,.95) 100%
+  );
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 rgba(255,255,255,.07);
+}
+.chartCell .panelInner{
+  padding:16px 16px 14px;
+}
+.chartCell .chartBox{
+  height:220px;
+  margin-top:4px;
+  border-radius:12px;
+  background: radial-gradient(120% 85% at 50% 100%, rgba(255,255,255,.055), transparent 52%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+  position:relative;
+}
+.chartCell .chartBox .recharts-responsive-container{
+  position:relative;
+  z-index:1;
+}
+/* Tooltip Recharts (theme tối) */
+.chartTooltip{
+  padding:10px 12px;
+  border-radius:10px;
+  background: rgba(18,20,26,.92);
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow: 0 12px 40px rgba(0,0,0,.55);
+  backdrop-filter: blur(8px);
+}
+.chartTooltipMeta{
+  font-size:10px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color: var(--muted-2);
+  margin-bottom:4px;
+}
+.chartTooltipValue{
+  font-size:18px;
+  font-weight:800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.chartTooltipUnit{
+  margin-left:4px;
+  font-size:13px;
+  font-weight:600;
+  color: var(--muted);
+}
 .chartRow{
   margin-top:16px;
   display:grid;
@@ -160,26 +222,6 @@ body{
 }
 .chartBox{
   height:180px;
-}
-.statsCol{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-.statCard{
-  padding:14px;
-  border-radius:14px;
-  border:1px solid var(--stroke);
-  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
-}
-.statLabel{
-  color:var(--muted-2);
-  font-size:11px;
-}
-.statValue{
-  margin-top:6px;
-  font-size:18px;
-  font-weight:800;
 }
 
 .deviceBar{
@@ -375,6 +417,11 @@ body{
 .tagOn{ color: rgba(34,197,94,.95); font-weight:800; }
 .tagOff{ color: rgba(239,68,68,.95); font-weight:800; }
 .tagWait{ color: rgba(250,204,21,.95); font-weight:800; }
+/* Trạng thái xử lý lệnh (cột Status) */
+.tagOk,
+.tagAck{ color: rgba(34,197,94,.95); font-weight:800; }
+.tagTimeout{ color: rgba(239,68,68,.95); font-weight:800; }
+.tagState{ color: var(--muted); font-weight:700; }
 
 .pagination{
   display:flex;
@@ -435,6 +482,10 @@ body{
   justify-content:center;
   gap:10px;
   font-weight:800;
+}
+
+@media (max-width: 1100px){
+  .chartsGrid{ grid-template-columns: 1fr; }
 }
 
 @media (max-width: 980px){

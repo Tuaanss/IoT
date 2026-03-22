@@ -11,11 +11,10 @@ import {
   fetchSensorData,
   sendDeviceAction,
 } from "./services/api";
-import { SENSOR_COLORS, CARD_STYLE } from "./constants/theme";
+import { SENSOR_COLORS } from "./constants/theme";
 
 export default function App() {
   const [page, setPage] = useState("dashboard");
-  const [sensorView, setSensorView] = useState("temp");
 
   const [temp, setTemp] = useState(0);
   const [humidity, setHumidity] = useState(0);
@@ -27,7 +26,9 @@ export default function App() {
   const [pendingDevice, setPendingDevice] = useState(null);
 
   const [history, setHistory] = useState([]);
-  const [chart, setChart] = useState([]);
+  const [chartTemp, setChartTemp] = useState([]);
+  const [chartHumidity, setChartHumidity] = useState([]);
+  const [chartLight, setChartLight] = useState([]);
   const [sensorRows, setSensorRows] = useState([]);
 
   useEffect(() => {
@@ -101,15 +102,22 @@ export default function App() {
         if (latest.humidity) setHumidity(Number(latest.humidity.value || 0));
         if (latest.light) setLightLevel(Number(latest.light.value || 0));
 
-        setChart((prev) => {
-          const nextVal =
-            sensorView === "temp"
-              ? (latest.temp ? Number(latest.temp.value || 0) : 0)
-              : sensorView === "humidity"
-                ? (latest.humidity ? Number(latest.humidity.value || 0) : 0)
-                : (latest.light ? Number(latest.light.value || 0) : 0);
+        const tv = latest.temp ? Number(latest.temp.value || 0) : 0;
+        const hv = latest.humidity ? Number(latest.humidity.value || 0) : 0;
+        const lv = latest.light ? Number(latest.light.value || 0) : 0;
 
-          const next = [...prev, { t: prev.length, v: nextVal }];
+        setChartTemp((prev) => {
+          const next = [...prev, { t: prev.length, v: tv }];
+          if (next.length > 60) next.shift();
+          return next;
+        });
+        setChartHumidity((prev) => {
+          const next = [...prev, { t: prev.length, v: hv }];
+          if (next.length > 60) next.shift();
+          return next;
+        });
+        setChartLight((prev) => {
+          const next = [...prev, { t: prev.length, v: lv }];
           if (next.length > 60) next.shift();
           return next;
         });
@@ -125,7 +133,7 @@ export default function App() {
       isCancelled = true;
       clearInterval(intervalId);
     };
-  }, [sensorView]);
+  }, []);
 
   useEffect(() => {
     if (page !== "sensors") return;
@@ -160,10 +168,12 @@ export default function App() {
   }, [page]);
 
   const logAction = async (device, state) => {
+    const cmd = state ? "ON" : "OFF";
     const entry = {
       id: history.length + 1,
       device,
-      status: state ? "ON" : "OFF",
+      action: cmd,
+      status: "WAITING",
       time: new Date().toLocaleTimeString(),
     };
 
@@ -171,7 +181,7 @@ export default function App() {
 
     setPendingDevice(device);
     try {
-      await sendDeviceAction(device, entry.status);
+      await sendDeviceAction(device, cmd);
     } catch (e) {
       console.error("Failed to send device action", e);
     } finally {
@@ -186,11 +196,10 @@ export default function App() {
           temp={temp}
           humidity={humidity}
           lightLevel={lightLevel}
-          sensorView={sensorView}
-          setSensorView={setSensorView}
-          chart={chart}
+          chartTemp={chartTemp}
+          chartHumidity={chartHumidity}
+          chartLight={chartLight}
           colors={SENSOR_COLORS}
-          card={CARD_STYLE}
           fan={fan}
           setFan={setFan}
           light={light}
